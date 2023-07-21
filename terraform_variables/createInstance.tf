@@ -1,8 +1,10 @@
 resource "aws_instance" "MyFirstInstance" {
-  ami           = "ami-0af9d24bd5539d7af"
+  ami           = lookup(var.AMIS, var.AWS_REGION)
   instance_type = "t2.micro"
 
   tags = {
     Name = "demoinstance"
   }
+
+  security_groups = var.Security_Group
 }
