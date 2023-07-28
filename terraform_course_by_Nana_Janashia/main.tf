@@ -6,10 +6,13 @@ provider "aws" {
 
 variable "subnet_cidr_block" {
   description = "subnet cidr block"
+  default = "10.0.50.0/24"
+  type = string
 }
 
 variable "vpc_cidr_block" {
   description = "vpc cidr block"
+  default = "10.0.0.0/16"
 }
 
 resource "aws_vpc" "development-vpc" {
