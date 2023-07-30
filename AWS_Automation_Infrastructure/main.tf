@@ -9,6 +9,8 @@ variable "env_prefix" {}
 variable "my_ip" {}
 variable "instance_type" {}
 variable "public_key" {}
+variable "public_key_location" {}
+variable "private_key_location" {}
 
 data "aws_ami" "latest-amazon-linux-image" {
   most_recent = true
@@ -82,9 +84,9 @@ resource "aws_default_security_group" "default-sg" {
 }
 
 resource "aws_key_pair" "ssh-key" {
-  key_name   = "server-key"
-  public_key = var.public_key
-  # public_key = file(var.public_key_location)
+  key_name = "server-key"
+  # public_key = var.public_key
+  public_key = file(var.public_key_location)
 }
 
 resource "aws_instance" "myapp-server" {
@@ -99,16 +101,43 @@ resource "aws_instance" "myapp-server" {
   associate_public_ip_address = true
   key_name                    = aws_key_pair.ssh-key.key_name
 
-  #REVISAR ESTA PARTE
+  connection {
+    type        = "ssh"
+    host        = self.public_ip
+    user        = "ec2-user"
+    private_key = file(var.private_key_location)
+  }
+
+
+  # PROVISIONERS:
+  provisioner "file" {
+    source      = "entry-script.sh"
+    destination = "/home/ec2-user/entry-script.sh"
+  }
+
+  provisioner "local-exec" {
+    command = "echo ${self.public_ip} > output.txt"
+  }
+
+  provisioner "remote-exec" {
+    # inline = [
+    #   "export ENV=dev",
+    #   "mkdir newdir",
+    # ]
+
+    script = file("entry-script.sh")
+  }
+
   # user_data = file("entry-script.sh")
-  user_data = <<-EOF
-                  #!/bin/bash
-                  sudo yum update -y
-                  sudo yum install -y docker
-                  sudo systemctl start docker
-                  sudo usermod -aG docker ec2-user
-                  docker run -p 8080:80 nginx
-               EOF
+
+  # user_data = <<-EOF
+  #                 #!/bin/bash
+  #                 sudo yum update -y
+  #                 sudo yum install -y docker
+  #                 sudo systemctl start docker
+  #                 sudo usermod -aG docker ec2-user
+  #                 docker run -p 8080:80 nginx
+  #              EOF
 
   tags = {
     Name : "${var.env_prefix}-myapp-server"
